@@ -1,30 +1,45 @@
-import asyncio
+import os
 import discord
 from discord.ext import commands
 
-intents = discord.Intents.default()
-intents.message_content = True
+# This enables all intents automatically so voice tracking works right away
+intents = discord.Intents.all()
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-FRAMES = [
-    "```ansi\n\u001b[1;31m  🎵 [🔊 MAX VOLUME] 🎵\n    /\\_/\\\n   (  o.o )  ✈️  *flying through red space*\n    > ^ <\n```",
-    "```ansi\n\u001b[1;34m  🎵 [🔊 BASS DROP!] 🎵\n      /\\_/\\\n     (  -.- )  ✈️  *flying through blue space*\n      > ^ <\n```",
-    "```ansi\n\u001b[1;35m  🎵 [🔊 DRIFT INTENSIFIES] 🎵\n        /\\_/\\\n       (  >=< )  ✈️  *flying through purple space*\n        > ^ <\n```",
-    "```ansi\n\u001b[1;32m  🎵 [🔊 PHONK] 🎵\n          /\\_/\\\n         (  o.o )  ✈️  *flying through green space*\n          > ^ <\n```",
-    "```ansi\n\u001b[1;36m  🎵 [🚀 HYPERSPACE GALAXY] 🚀\n          /\\_/\\\n         (  O.O )  ✨ *entering galaxy*\n          > ^ <\n```"
-]
+OIIA_AUDIO_URL = "https://files.catbox.moe/3p0m7u.mp4"
+
+@bot.event
+async def on_voice_state_update(member, before, after):
+    # Ignore bot accounts joining channels
+    if member.bot:
+        return
+
+    # Check if a user joined a voice channel
+    if before.channel is None and after.channel is not None:
+        voice_channel = after.channel
+
+        # Connect to the voice channel if the bot is not already in one
+        if member.guild.voice_client is None:
+            vc = await voice_channel.connect()
+        else:
+            vc = member.guild.voice_client
+
+        # Stop any audio currently playing
+        if vc.is_playing():
+            vc.stop()
+
+        ffmpeg_options = {
+            'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+            'options': '-vn'
+        }
+
+        # Play the audio when you join
+        vc.play(discord.FFmpegPCMAudio(OIIA_AUDIO_URL, **ffmpeg_options))
 
 @bot.command()
-async def oiia(ctx):
-    msg = await ctx.send(FRAMES[0])
-    for _ in range(3):
-        for frame in FRAMES:
-            await asyncio.sleep(0.6)
-            await msg.edit(content=frame)
-    await asyncio.sleep(1)
-    await msg.delete()
+async def leave(ctx):
+    if ctx.voice_client:
+        await ctx.voice_client.disconnect()
 
-import os
-bot.run(os.getenv("MTUzNzMxMTkxMTM0MTg1NDczMA.G-u_Ux.9AuCwPSEfKVrZWODFGu1fr374IgPJuQNSF3saQ"))
-
+bot.run(os.getenv("MTUzNzMyOTc2MDI2MTM4MjI3NA.GjMnPu.lOgw79qkYoBMughZmMd9Ts0PtjLiOuFvwGebvI"))
